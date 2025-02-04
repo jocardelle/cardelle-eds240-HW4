@@ -1,0 +1,152 @@
+---
+title: "EDS 240 - HW2 Exploration"
+subtitle: "Part 2: Data wrangling & exploratory data visualization"
+description: "Assigned Tue 01/21/2025 | Due Tue 02/04/2025"
+author: "Josephine Cardelle"
+toc: true
+editor_options: 
+  chunk_output_type: console
+execute: 
+  warning: false
+  message: false
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    code-summary: "Show the code"
+    toc: true
+fig-align: "center"
+---
+
+### Load libraries
+```{r}
+library(tidyverse)
+library(here)
+library(readxl)
+library(janitor)
+library(ggplot2)
+library(lubridate)
+```
+
+### Load data
+```{r}
+disasters <- read_excel(here("data/americas_natural_disasters.xlsx"))
+```
+
+### Explore data
+```{r}
+#| output: false
+
+# View column names
+colnames(disasters)
+
+# Clean names
+disasters_clean <- clean_names(disasters)
+
+# View dimensions
+dim(disasters_clean)
+
+# View different disaster groups
+unique(disasters_clean$disaster_group)
+
+# Filter to just natural disasters
+nat_dis <- disasters_clean %>% 
+  filter(disaster_group == "Natural")
+
+# View different disaster types and subtypes
+unique(nat_dis$disaster_type)
+
+unique(nat_dis$disaster_subtype)
+
+# Add start date and end date columns
+nat_dis <- nat_dis %>%
+mutate(start_date = make_date(year = nat_dis$start_year,
+                   month = nat_dis$start_month,
+                   day = nat_dis$start_day),
+       end_date = make_date(year = nat_dis$end_year,
+                   month = nat_dis$end_month,
+                   day = nat_dis$end_day))
+```
+
+### Which natural disaster is the most common ?
+```{r}
+# Create histogram
+ggplot(nat_dis, aes(x = fct_infreq(disaster_type), fill = disaster_type)) +
+  geom_histogram(stat="count") +
+  
+  # Flip axis
+  coord_flip() +
+  scale_fill_viridis_d() +
+  
+  # Set titles
+  labs(
+    y = "Count",
+    x = "Disaster Type",
+    title = "Disaster Counts in the Americas (2000-2024)"
+  ) +
+  theme_minimal() +
+  
+  # Remove legend
+  theme(
+    legend.position = "none"
+  )
+```
+
+### How do disasters change over time?
+```{r}
+# Create line plot
+ggplot(nat_dis, aes(x = start_year, color = disaster_type)) +
+  geom_line(stat = "count") +
+  
+  # Add titles
+  labs(
+    title = "Disaster Types over time in the Americas",
+    x = "Start Year",
+    y = "Count",
+    color = "Disaster Type"
+  ) +
+  theme_minimal()
+```
+
+
+### Are there patterns between months and disasters?
+```{r}
+# Create dataframe with counts of natural disasters for each month and year
+nat_dis_counts <- nat_dis %>%
+  group_by(start_year, start_month) %>%
+  summarise(count = n())
+
+# Create timeseries heatmap
+ggplot(nat_dis_counts, aes(x = start_month, y = factor(start_year), fill = count)) +
+  geom_tile(color = "white") +  
+  scale_fill_viridis_c(option = "magma", direction = -1, name = "Disaster Count") +
+  
+  # Set x breaks so theyre integers 1 - 12
+  scale_x_continuous(breaks = 1:12) +
+  
+  # Set titles
+  labs(title = "Natural Disasters in the Americas per Month (2000-2024)",
+       x = "Month", 
+       y = "Year") +
+  theme_minimal()
+
+```
+
+
+### Questions
+1. What have you learned about your data? Have any potentially interesting patterns emerged?
+
+- I have learned that storms and floods are by far the most common natural disasters in the Americas in this time period. I also saw from the second visualization that exploring changes over time for individual disaster types, such as extreme heat, could show more insight instead of doing all disaster types together. The last visualization also showed an interesting pattern with September and October having periods of high disaster counts.
+
+2. In HW #1, you outlined some questions that you wanted to answer using these data. Have you made any strides towards answering those questions? If yes, how so? If no, what next steps do you need to take (e.g. I need to create X plot type, I still need to track down Y data, I need to restructure existing data so that you can visualize it in Z ways, etc.)?
+
+- I have started exploring how the occurrences of natural disaster in the Americas has changed in the last 25 years by doing an exploratory line graph (the second visualization). I want to dive further into this by viewing how individual disaster types have changed overtime. I also began exploring what the most common natural disaster in each region by first examining the most common natural disasters overall. I'll next break this down into different regions. The question I havent started answering yet is: what have been the deadliest/most destructive natural disasters in the Americas in the last 25 years? I need to first explore the different variables I can use for this (fatalities/magnitude/total damage cost) and decide which I want to utilize. Then I can explore different ways to visualize it such as a bubble chart with the top 10 most destructive disasters.
+
+
+
+3. What challenges do you foresee encountering with your data? These can be data wrangling and / or visualization challenges.
+
+- I can see that I will have to work with a lot of NAs. When the data gets into more specific variables such as magnitude, total deaths, no. injured, total damage, etc. there are a lot of missing values. This could mess with my analysis and visualizations.
+
+
+
